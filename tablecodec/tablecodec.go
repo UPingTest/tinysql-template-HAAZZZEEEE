@@ -71,8 +71,22 @@ func EncodeRowKeyWithHandle(tableID int64, handle int64) kv.Key {
 
 // DecodeRecordKey decodes the key and gets the tableID, handle.
 func DecodeRecordKey(key kv.Key) (tableID int64, handle int64, err error) {
-	/* Your code here */
-	return
+	if !isRecordKeyValid(key) {
+		return 0, 0, errInvalidKey.GenWithStack("DecodeRecordKey: invalid key 1- %q", key)
+	}
+	_, tableID, err = codec.DecodeInt(key[tablePrefixLength : tablePrefixLength+idLen])
+	if err != nil {
+		return 0, 0, errInvalidKey.GenWithStack("DecodeRecordKey: invalid key 2- %q", key)
+	}
+	_, handle, err = codec.DecodeInt(key[prefixLen : prefixLen+idLen])
+	if err != nil {
+		return 0, 0, errInvalidKey.GenWithStack("DecodeRecordKey: invalid key 3- %q", key)
+	}
+	return tableID, handle, nil
+}
+
+func isRecordKeyValid(key kv.Key) bool {
+	return len(key) == RecordRowKeyLen && hasTablePrefix(key) && hasRecordPrefixSep(key[prefixLen-2:])
 }
 
 // appendTableIndexPrefix appends table index prefix  "t[tableID]_i".
@@ -94,8 +108,22 @@ func EncodeIndexSeekKey(tableID int64, idxID int64, encodedValue []byte) kv.Key 
 
 // DecodeIndexKeyPrefix decodes the key and gets the tableID, indexID, indexValues.
 func DecodeIndexKeyPrefix(key kv.Key) (tableID int64, indexID int64, indexValues []byte, err error) {
-	/* Your code here */
-	return tableID, indexID, indexValues, nil
+	if !isIndexKeyPrefixValid(key) {
+		return 0, 0, []byte{}, errInvalidKey.GenWithStack("DecodeIndexKeyPrefix: invalid key 1- %q", key)
+	}
+	_, tableID, err = codec.DecodeInt(key[tablePrefixLength : tablePrefixLength+idLen])
+	if err != nil {
+		return 0, 0, []byte{}, errInvalidKey.GenWithStack("DecodeIndexKeyPrefix: invalid key 2- %q", key)
+	}
+	_, indexID, err = codec.DecodeInt(key[prefixLen : prefixLen+idLen])
+	if err != nil {
+		return 0, 0, []byte{}, errInvalidKey.GenWithStack("DecodeIndexKeyPrefix: invalid key - %q", key)
+	}
+	return tableID, indexID, key[RecordRowKeyLen:], nil
+}
+
+func isIndexKeyPrefixValid(key kv.Key) bool {
+	return len(key) >= RecordRowKeyLen && hasTablePrefix(key) && bytes.HasPrefix(key[prefixLen-2:], indexPrefixSep)
 }
 
 // DecodeIndexKey decodes the key and gets the tableID, indexID, indexValues.

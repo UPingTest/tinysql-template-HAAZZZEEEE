@@ -93,7 +93,7 @@ TiDB> select region, count(*) from person group by region;
 
 当然，对于聚合的结果我们可能还是需要过滤一些行，不过此时前面介绍的 where 语句就不能使用了，因为 where 后面的过滤条件是在 group by 之前生效的，在 group by 之后过滤需要使用 having:
 
-```
+```sql
 TiDB> select region, count(*) from person group by region having count(*) > 1;
 +--------+----------+
 | region | count(*) | 
